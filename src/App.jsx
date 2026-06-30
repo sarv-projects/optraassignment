@@ -1,16 +1,11 @@
-/**
- * App.jsx
- *
- * Top-level component. Manages state for rules, cart items, and results.
- * Wires together CSV upload → parse → engine → display.
- */
-
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import CsvUploader from './components/CsvUploader.jsx'
 import DataTable from './components/DataTable.jsx'
 import ErrorBanner from './components/ErrorBanner.jsx'
+import NaturalLanguageInput from './components/NaturalLanguageInput.jsx'
+import PdfUploader from './components/PdfUploader.jsx'
 import { parseRulesCSV, parseCartCSV } from './engine/csvParser.js'
-import { processCart, cartTotal } from './engine/discountEngine.js'
+import { processCart } from './engine/discountEngine.js'
 
 // ── Column definitions ───────────────────────────────────────────
 
@@ -25,6 +20,10 @@ const RULES_COLUMNS = [
     render: (v, row) => row.type === 'percentage' ? `${v}% off` : `Rs.${v} off`,
   },
   { key: 'stackable', label: 'Stackable',  render: (v) => (v ? 'Yes' : 'No') },
+  {
+    key: 'minCartValue', label: 'Min. Cart',
+    render: (v) => (v != null ? `Rs.${v.toLocaleString('en-IN')}` : '—'),
+  },
 ]
 
 const CART_COLUMNS = [
@@ -91,15 +90,27 @@ const S = {
   },
   totalRow: {
     display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+    gap: '1rem', marginTop: '0.5rem', paddingTop: '0.5rem',
+  },
+  totalRowThick: {
+    display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
     gap: '1rem', marginTop: '0.75rem', paddingTop: '0.75rem',
     borderTop: '2px solid #131A48',
   },
   totalLabel: { fontWeight: 700, fontSize: 14, color: '#131A48' },
   totalValue: { fontWeight: 700, fontSize: 16, color: '#131A48' },
-  tag: (color, bg) => ({
-    display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '1px 6px',
-    borderRadius: 20, background: bg, color, textTransform: 'uppercase', letterSpacing: '0.04em',
-  }),
+  cartOffer: {
+    display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+    gap: '1rem', paddingTop: '0.4rem', marginTop: '0.4rem',
+    borderTop: '1px dashed #CECECE',
+  },
+  cartOfferLabel: { fontSize: 12, color: '#1e5c2c', fontWeight: 600 },
+  cartOfferValue: { fontSize: 13, color: '#c0392b', fontWeight: 700 },
+  cartOfferTag: { fontSize: 10, color: '#1e5c2c', fontWeight: 700, marginLeft: 8 },
+  rulesTag: {
+    display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '2px 7px',
+    borderRadius: 20, marginLeft: 6, verticalAlign: 'middle',
+  },
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -115,6 +126,10 @@ export default function App() {
 
   const [results, setResults]       = useState(null)
 
+  const [additionalRules, setAdditionalRules] = useState([])
+
+  const allRules = [...rules, ...additionalRules]
+
   // ── Handlers ──
 
   function handleRulesLoad(csvText, fileName) {
@@ -122,7 +137,7 @@ export default function App() {
     setRules(data)
     setRulesErr(errors)
     setRulesFileName(fileName)
-    setResults(null) // clear stale results
+    setResults(null)
   }
 
   function handleCartLoad(csvText, fileName) {
@@ -133,18 +148,36 @@ export default function App() {
     setResults(null)
   }
 
-  function handleCalculate() {
-    const res = processCart(cartItems, rules)
+  function handleCartPdfLoad(items) {
+    setCartItems(items)
+    setCartErrors([])
+    setCartFileName('cart.pdf')
+    // Auto re-run engine with the new cart and existing rules
+    const res = processCart(items, allRules)
     setResults(res)
   }
 
-  const canCalculate = rules.length > 0 && cartItems.length > 0
+  function handleNaturalLanguageRule(rule) {
+    const updated = [...additionalRules, rule]
+    setAdditionalRules(updated)
+    if (cartItems.length > 0) {
+      setResults(processCart(cartItems, [...rules, ...updated]))
+    } else {
+      setResults(null)
+    }
+  }
+
+  function handleCalculate() {
+    const res = processCart(cartItems, allRules)
+    setResults(res)
+  }
+
+  const canCalculate = allRules.length > 0 && cartItems.length > 0
 
   // ── Render ──
 
   return (
     <div style={S.page}>
-      {/* Header */}
       <div style={S.header}>
         <div style={S.logoTxt}>O<span style={S.logoSpan}>pp</span>tra</div>
         <div style={S.headerSub}>Discount Engine</div>
@@ -154,7 +187,6 @@ export default function App() {
 
         {/* Upload row */}
         <div style={S.grid2}>
-          {/* Rules upload */}
           <div style={S.section}>
             <div style={S.sectionTitle}>Discount Rules</div>
             <CsvUploader
@@ -168,14 +200,16 @@ export default function App() {
             {rules.length > 0 && (
               <div style={{ marginTop: '0.75rem' }}>
                 <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>
-                  {rules.length} rule{rules.length > 1 ? 's' : ''} loaded
+                  {rules.length} rule{rules.length > 1 ? 's' : ''} loaded from CSV
+                  {additionalRules.length > 0 && (
+                    <span> + {additionalRules.length} from natural language</span>
+                  )}
                 </div>
-                <DataTable columns={RULES_COLUMNS} rows={rules} />
+                <DataTable columns={RULES_COLUMNS} rows={allRules} />
               </div>
             )}
           </div>
 
-          {/* Cart upload */}
           <div style={S.section}>
             <div style={S.sectionTitle}>Cart Items</div>
             <CsvUploader
@@ -184,6 +218,10 @@ export default function App() {
               onLoad={handleCartLoad}
               hasData={cartItems.length > 0}
               fileName={cartFileName}
+            />
+            <PdfUploader
+              onCartLoad={handleCartPdfLoad}
+              cartItemCount={cartItems.length}
             />
             <ErrorBanner errors={cartErrors} />
             {cartItems.length > 0 && (
@@ -197,6 +235,9 @@ export default function App() {
           </div>
         </div>
 
+        {/* Natural Language Input */}
+        <NaturalLanguageInput onRuleAdd={handleNaturalLanguageRule} />
+
         {/* Calculate button */}
         <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
           <button
@@ -208,7 +249,7 @@ export default function App() {
           </button>
           {!canCalculate && (
             <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>
-              Upload both files to calculate
+              Load rules and cart items to calculate
             </div>
           )}
         </div>
@@ -217,10 +258,31 @@ export default function App() {
         {results && (
           <div style={S.section}>
             <div style={S.sectionTitle}>Cart Summary</div>
-            <DataTable columns={RESULTS_COLUMNS} rows={results} />
+            <DataTable columns={RESULTS_COLUMNS} rows={results.items} />
+
+            {/* Subtotal */}
             <div style={S.totalRow}>
-              <span style={S.totalLabel}>Cart Total</span>
-              <span style={S.totalValue}>Rs.{cartTotal(results).toLocaleString('en-IN')}</span>
+              <span style={S.totalLabel}>Cart Total before offer</span>
+              <span style={S.totalValue}>Rs.{results.cartSubtotal.toLocaleString('en-IN')}</span>
+            </div>
+
+            {/* Cart offer row — only shown when triggered */}
+            {results.cartOffer?.applied && (
+              <div style={S.cartOffer}>
+                <span style={S.cartOfferLabel}>
+                  Cart Offer — {results.cartOffer.ruleId}: {results.cartOffer.discountLabel}
+                </span>
+                <span style={S.cartOfferValue}>
+                  &minus;Rs.{results.cartOffer.discountAmount.toLocaleString('en-IN')}
+                  <span style={S.cartOfferTag}>Cart offer</span>
+                </span>
+              </div>
+            )}
+
+            {/* Final total */}
+            <div style={S.totalRowThick}>
+              <span style={S.totalLabel}>Final Cart Total</span>
+              <span style={S.totalValue}>Rs.{results.finalTotal.toLocaleString('en-IN')}</span>
             </div>
           </div>
         )}

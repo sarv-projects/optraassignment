@@ -7,12 +7,13 @@
  * Data shapes:
  *
  * DiscountRule {
- *   ruleId:    string       — e.g. "RULE-01"
- *   scope:     "brand" | "platform"
- *   appliesTo: string       — e.g. "Natura Casa", "Amazon India"
- *   type:      "percentage" | "flat"
- *   value:     number       — percentage as integer (15 = 15%), flat in rupees
- *   stackable: boolean
+ *   ruleId:       string   — e.g. "RULE-01"
+ *   scope:        "brand" | "platform" | "cart"
+ *   appliesTo:    string   — e.g. "Natura Casa", "Amazon India" (empty for cart)
+ *   type:         "percentage" | "flat"
+ *   value:        number   — percentage as integer (15 = 15%), flat in rupees
+ *   stackable:    boolean
+ *   minCartValue: number?  — minimum cart subtotal for cart-scope rules
  * }
  *
  * CartItem {
@@ -35,12 +36,22 @@
  *   skippedRules:  string[]
  *   reasoning:     string   — customer-readable explanation
  * }
+ *
+ * CartOffer {
+ *   applied:       boolean  — whether the cart offer was triggered
+ *   ruleId:        string?
+ *   discountLabel: string?  — e.g. "Cart offer: 10% off"
+ *   discountAmount: number? — rupee saving
+ *   thresholdMet:  boolean?
+ * }
  */
 
 /**
  * Returns true if the rule applies to this cart item.
+ * Cart-scope rules never match individual items.
  */
 export function ruleMatchesItem(item, rule) {
+  if (rule.scope === 'cart') return false
   const normalise = (s) => s.trim().toLowerCase()
   if (rule.scope === 'brand') {
     return normalise(item.brand) === normalise(rule.appliesTo)
@@ -159,15 +170,68 @@ export function applyDiscounts(item, rules) {
 }
 
 /**
- * Runs applyDiscounts across every item in the cart.
- * Returns an array of DiscountResult objects.
+ * Runs applyDiscounts across every item in the cart, then evaluates
+ * any cart-scope rules against the item subtotal.
+ *
+ * Returns { items: DiscountResult[], cartOffer: CartOffer | null, cartSubtotal: number, finalTotal: number }
  */
 export function processCart(cartItems, rules) {
-  return cartItems.map((item) => applyDiscounts(item, rules))
+  const items = cartItems.map((item) => applyDiscounts(item, rules))
+  const cartSubtotal = items.reduce((sum, r) => sum + r.finalPrice, 0)
+
+  // Find cart-scope rules
+  const cartRules = rules.filter((r) => r.scope === 'cart')
+
+  let cartOffer = null
+
+  for (const rule of cartRules) {
+    const minVal = rule.minCartValue ?? 0
+    if (cartSubtotal >= minVal) {
+      const discountAmount = rule.type === 'percentage'
+        ? Math.round(cartSubtotal * rule.value / 100)
+        : rule.value
+
+      const conditionStr = rule.minCartValue
+        ? `Rs.${cartSubtotal.toLocaleString('en-IN')} ≥ Rs.${rule.minCartValue.toLocaleString('en-IN')}`
+        : ''
+
+      const description = rule.type === 'percentage'
+        ? `${rule.value}% off entire cart`
+        : `Rs.${rule.value} off entire cart`
+
+      const discountLabel = conditionStr
+        ? `${conditionStr} → ${description}`
+        : description
+
+      cartOffer = {
+        applied: true,
+        ruleId: rule.ruleId,
+        discountLabel,
+        discountAmount,
+        thresholdMet: true,
+        description,
+      }
+      break // only one cart offer applies
+    } else {
+      cartOffer = {
+        applied: false,
+        ruleId: rule.ruleId,
+        discountLabel: null,
+        discountAmount: null,
+        thresholdMet: false,
+      }
+    }
+  }
+
+  const finalTotal = cartOffer?.applied
+    ? cartSubtotal - cartOffer.discountAmount
+    : cartSubtotal
+
+  return { items, cartOffer, cartSubtotal, finalTotal }
 }
 
 /**
- * Sums the final prices across all results.
+ * Sums the final prices across all results (item-level only).
  */
 export function cartTotal(results) {
   return results.reduce((sum, r) => sum + r.finalPrice, 0)
