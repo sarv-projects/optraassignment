@@ -23,17 +23,42 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString()
 
 /**
+ * Group pdf.js text items into visual lines using their Y position.
+ */
+function groupTextItemsIntoLines(items) {
+  const sorted = [...items].sort((a, b) => b.transform[5] - a.transform[5])
+  const lines = []
+  let currentY = null
+  let currentParts = []
+
+  for (const item of sorted) {
+    const y = Math.round(item.transform[5])
+    if (currentY !== null && Math.abs(y - currentY) > 2) {
+      const line = currentParts.join('').replace(/\s+/g, ' ').trim()
+      if (line) lines.push(line)
+      currentParts = []
+    }
+    currentY = y
+    currentParts.push(item.str)
+  }
+
+  const last = currentParts.join('').replace(/\s+/g, ' ').trim()
+  if (last) lines.push(last)
+  return lines
+}
+
+/**
  * Read raw text from all pages of a PDF.
  */
 async function readPdfText(arrayBuffer) {
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
-  let fullText = ''
+  const pageLines = []
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    fullText += content.items.map((item) => item.str).join(' ') + '\n'
+    pageLines.push(...groupTextItemsIntoLines(content.items))
   }
-  return fullText
+  return pageLines.join('\n')
 }
 
 /**

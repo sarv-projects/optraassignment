@@ -70,7 +70,7 @@ See [Groq models](https://console.groq.com/docs/models).
 ## How to use
 
 1. Upload `sample-data/rules.csv`
-2. Upload `sample-data/cart.csv` **or** a cart PDF
+2. Upload `sample-data/cart.csv` **or** `sample-data/cart.pdf`
 3. Click **Calculate Discounts** (PDF upload auto-calculates)
 4. Optionally add rules via natural language
 
@@ -97,6 +97,7 @@ src/
 sample-data/
   rules.csv
   cart.csv
+  cart.pdf              ← sample cart for PDF upload demo
 ```
 
 ## Expected results (sample data)
