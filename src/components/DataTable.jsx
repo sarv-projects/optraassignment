@@ -1,10 +1,3 @@
-/**
- * DataTable.jsx
- *
- * Renders a simple table from an array of objects.
- * Columns are defined as [{ key, label, render? }].
- */
-
 export default function DataTable({ columns, rows, emptyMessage = 'No data loaded.' }) {
   if (!rows || rows.length === 0) {
     return (

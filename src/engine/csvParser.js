@@ -1,23 +1,5 @@
-/**
- * csvParser.js
- *
- * Converts raw CSV text into the typed objects the discount engine expects.
- * Uses papaparse for reliable CSV parsing, then maps column names to the
- * internal data shapes.
- *
- * Expected rules.csv columns:
- *   rule_id, scope, applies_to, type, value, stackable, min_cart_value (optional)
- *
- * Expected cart.csv columns:
- *   item_id, product, brand, platform, base_price
- */
-
 import Papa from 'papaparse'
 
-/**
- * Parses the raw text of rules.csv into an array of DiscountRule objects.
- * Returns { data, errors } where errors is an array of row-level issues.
- */
 export function parseRulesCSV(csvText) {
   const { data: rows, errors: parseErrors } = Papa.parse(csvText.trim(), {
     header: true,
@@ -44,7 +26,6 @@ export function parseRulesCSV(csvText) {
 
     const scope = row.scope?.trim().toLowerCase()
 
-    // applies_to is only required for brand/platform scope, not cart
     if (scope !== 'cart' && !row.applies_to) missing.push('applies_to')
 
     if (missing.length > 0) {
@@ -72,7 +53,6 @@ export function parseRulesCSV(csvText) {
     const stackableStr = (row.stackable ?? '').trim().toLowerCase()
     const stackable = stackableStr === 'true' || stackableStr === '1' || stackableStr === 'yes'
 
-    // Parse optional min_cart_value (only meaningful for cart-scope rules)
     let minCartValue = null
     if (row.min_cart_value !== undefined && row.min_cart_value !== '') {
       minCartValue = parseFloat(row.min_cart_value)
@@ -96,10 +76,6 @@ export function parseRulesCSV(csvText) {
   return { data, errors }
 }
 
-/**
- * Parses the raw text of cart.csv into an array of CartItem objects.
- * Returns { data, errors } where errors is an array of row-level issues.
- */
 export function parseCartCSV(csvText) {
   const { data: rows, errors: parseErrors } = Papa.parse(csvText.trim(), {
     header: true,

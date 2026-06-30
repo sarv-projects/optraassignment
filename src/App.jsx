@@ -7,8 +7,6 @@ import PdfUploader from './components/PdfUploader.jsx'
 import { parseRulesCSV, parseCartCSV } from './engine/csvParser.js'
 import { processCart } from './engine/discountEngine.js'
 
-// ── Column definitions ───────────────────────────────────────────
-
 const RULES_COLUMNS = [
   {
     key: 'ruleId',
@@ -83,8 +81,6 @@ const RESULTS_COLUMNS = [
   },
 ]
 
-// ── Styles ───────────────────────────────────────────────────────
-
 const S = {
   page:    { minHeight: '100vh', background: '#f7f7f9', fontFamily: 'Arial, sans-serif' },
   header:  { background: '#131A48', padding: '0.85rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
@@ -128,20 +124,7 @@ const S = {
     display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '2px 7px',
     borderRadius: 20, marginLeft: 6, verticalAlign: 'middle',
   },
-  successBanner: {
-    background: '#e8f5e9',
-    border: '1px solid #81c784',
-    borderLeft: '3px solid #1e5c2c',
-    borderRadius: 4,
-    padding: '0.6rem 0.9rem',
-    marginBottom: '0.75rem',
-    fontSize: 12,
-    color: '#1e5c2c',
-    fontWeight: 600,
-  },
 }
-
-// ── Component ────────────────────────────────────────────────────
 
 export default function App() {
   const [rules, setRules]           = useState([])
@@ -161,8 +144,6 @@ export default function App() {
     ...rules.map((r) => ({ ...r, source: 'csv' })),
     ...additionalRules.map((r) => ({ ...r, source: 'nl' })),
   ]
-
-  // ── Handlers ──
 
   function handleRulesLoad(csvText, fileName) {
     const { data, errors } = parseRulesCSV(csvText)
@@ -211,8 +192,6 @@ export default function App() {
 
   const canCalculate = allRules.length > 0 && cartItems.length > 0
 
-  // ── Render ──
-
   return (
     <div style={S.page}>
       <div style={S.header}>
@@ -222,7 +201,6 @@ export default function App() {
 
       <div style={S.main}>
 
-        {/* Upload row */}
         <div style={S.grid2}>
           <div style={S.section}>
             <div style={S.sectionTitle}>Discount Rules</div>
@@ -239,9 +217,7 @@ export default function App() {
                 <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>
                   {rules.length} rule{rules.length > 1 ? 's' : ''} from CSV
                   {additionalRules.length > 0 && (
-                    <span style={{ color: '#1e5c2c', fontWeight: 700 }}>
-                      {' '}+ {additionalRules.length} added via natural language (this session)
-                    </span>
+                    <span> + {additionalRules.length} from natural language</span>
                   )}
                 </div>
                 <DataTable columns={RULES_COLUMNS} rows={allRules} />
@@ -274,14 +250,12 @@ export default function App() {
           </div>
         </div>
 
-        {/* Natural Language Input */}
         <NaturalLanguageInput
           onRuleAdd={handleNaturalLanguageRule}
           lastAddedRule={lastAddedRule}
           cartItems={cartItems}
         />
 
-        {/* Calculate button */}
         <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
           <button
             style={canCalculate ? S.btn : S.btnDisabled}
@@ -297,26 +271,16 @@ export default function App() {
           )}
         </div>
 
-        {/* Results */}
         {results && (
           <div style={S.section}>
             <div style={S.sectionTitle}>Cart Summary</div>
-            {lastAddedRule && (
-              <div style={S.successBanner}>
-                Recalculated with new rule: {lastAddedRule.scope} · {lastAddedRule.appliesTo || 'cart'} ·{' '}
-                {lastAddedRule.type === 'percentage' ? `${lastAddedRule.value}%` : `Rs.${lastAddedRule.value}`}
-                {lastAddedRule.stackable ? ' · stackable' : ''}
-              </div>
-            )}
             <DataTable columns={RESULTS_COLUMNS} rows={results.items} />
 
-            {/* Subtotal */}
             <div style={S.totalRow}>
               <span style={S.totalLabel}>Cart Total before offer</span>
               <span style={S.totalValue}>Rs.{results.cartSubtotal.toLocaleString('en-IN')}</span>
             </div>
 
-            {/* Cart offer row — only shown when triggered */}
             {results.cartOffer?.applied && (
               <div style={S.cartOffer}>
                 <span style={S.cartOfferLabel}>
@@ -329,7 +293,6 @@ export default function App() {
               </div>
             )}
 
-            {/* Final total */}
             <div style={S.totalRowThick}>
               <span style={S.totalLabel}>Final Cart Total</span>
               <span style={S.totalValue}>Rs.{results.finalTotal.toLocaleString('en-IN')}</span>

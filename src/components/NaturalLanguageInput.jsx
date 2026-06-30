@@ -160,12 +160,9 @@ export default function NaturalLanguageInput({ onRuleAdd, lastAddedRule, cartIte
   const [pendingRule, setPendingRule] = useState(null)
   const [parseError, setParseError] = useState('')
   const [parsing, setParsing] = useState(false)
-  const [parseSource, setParseSource] = useState('')
-
   async function handleParse() {
     setParseError('')
     setPendingRule(null)
-    setParseSource('')
     setParsing(true)
 
     try {
@@ -175,7 +172,6 @@ export default function NaturalLanguageInput({ onRuleAdd, lastAddedRule, cartIte
         return
       }
       setPendingRule(result.rule)
-      setParseSource(result.source ?? '')
     } finally {
       setParsing(false)
     }
@@ -220,10 +216,7 @@ export default function NaturalLanguageInput({ onRuleAdd, lastAddedRule, cartIte
 
       {lastAddedRule && !pendingRule && (
         <div style={S.success}>
-          Rule added to this session — <strong>{lastAddedRule.ruleId}</strong> ({lastAddedRule.scope} ·{' '}
-          {lastAddedRule.appliesTo || 'entire cart'} ·{' '}
-          {lastAddedRule.type === 'percentage' ? `${lastAddedRule.value}%` : `Rs.${lastAddedRule.value}`}
-          ). See the rules table above and updated cart summary below.
+          Rule added: {lastAddedRule.ruleId}
         </div>
       )}
 
@@ -231,15 +224,10 @@ export default function NaturalLanguageInput({ onRuleAdd, lastAddedRule, cartIte
         <div style={S.confirmBox}>
           <div style={{ fontWeight: 700, fontSize: 12, color: '#131A48', marginBottom: '0.5rem' }}>
             Confirm parsed rule
-            {parseSource && (
-              <span style={{ fontWeight: 400, fontSize: 10, color: '#888', marginLeft: 8 }}>
-                via {parseSource === 'groq' ? 'Groq LLM (API)' : 'regex fallback'}
-              </span>
-            )}
           </div>
           {cartItems.length > 0 && pendingRule.scope !== 'cart' && !ruleMatchesAnyCartItem(pendingRule, cartItems) && (
             <div style={S.warning}>
-              No cart items match &ldquo;{pendingRule.appliesTo}&rdquo;. Check spelling — it must match the brand/platform in your cart exactly.
+              No cart items match &ldquo;{pendingRule.appliesTo}&rdquo;.
             </div>
           )}
           <div style={S.fieldRow}>

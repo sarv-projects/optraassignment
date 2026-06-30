@@ -1,8 +1,3 @@
-/**
- * ErrorBanner.jsx
- * Displays a list of parse or validation errors.
- */
-
 export default function ErrorBanner({ errors }) {
   if (!errors || errors.length === 0) return null
   return (

@@ -1,14 +1,3 @@
-/**
- * pdfParser.js
- *
- * Extracts cart items from a PDF containing a simple table with columns:
- *   Product, Brand, Platform, Base Price
- *
- * Uses pdfjs-dist to read the PDF text content, then parses the table rows.
- *
- * Returns { data: CartItem[], errors: string[] }
- */
-
 import * as pdfjs from 'pdfjs-dist'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -16,9 +5,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString()
 
-/**
- * Cluster same-row text items into columns using horizontal gaps.
- */
 function clusterIntoColumns(rowItems, gapThreshold = 12) {
   const sorted = rowItems
     .filter((i) => i.str?.trim())
@@ -41,10 +27,6 @@ function clusterIntoColumns(rowItems, gapThreshold = 12) {
   return columns.map((col) => col.join(' ').trim()).filter(Boolean)
 }
 
-/**
- * Group pdf.js text items into visual lines using Y position,
- * with columns separated by " | " for reliable parsing.
- */
 function groupTextItemsIntoLines(items) {
   const byY = new Map()
 
@@ -102,21 +84,18 @@ function parseRowColumns(columns, itemCounter) {
 }
 
 function parseDataLine(trimmed, itemCounter) {
-  // Pipe-separated columns from PDF column clustering
   if (trimmed.includes(' | ')) {
     const columns = trimmed.split(' | ').map((s) => s.trim()).filter(Boolean)
     const row = parseRowColumns(columns, itemCounter)
     if (row) return row
   }
 
-  // 4+ columns separated by 2+ spaces
   const spacedParts = trimmed.split(/\s{2,}/).map((s) => s.trim()).filter(Boolean)
   if (spacedParts.length >= 4) {
     const row = parseRowColumns(spacedParts, itemCounter)
     if (row) return row
   }
 
-  // Single-space row: price at end, then platform / brand / product from the right
   const priceMatch = trimmed.match(/rs\.?\s*([\d,]+)\s*$/i)
   if (!priceMatch) return null
 
@@ -128,13 +107,11 @@ function parseDataLine(trimmed, itemCounter) {
 
   if (tokens.length < 3) return null
 
-  // Platform is usually the last 1–2 tokens before price
   let platform = tokens.pop()
   if (tokens.length >= 2 && /^(India|Pro|Basics)$/i.test(platform)) {
     platform = `${tokens.pop()} ${platform}`
   }
 
-  // Brand is usually the last 1–2 tokens remaining
   let brand = tokens.pop()
   if (tokens.length >= 1 && /^(Casa|Pro|Basics)$/i.test(brand)) {
     brand = `${tokens.pop()} ${brand}`

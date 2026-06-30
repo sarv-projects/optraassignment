@@ -115,7 +115,9 @@ export default function PdfUploader({ onCartLoad, cartItemCount }) {
           onChange={handleFile}
         />
         <div style={S.row}>
-          <span style={{ fontSize: 20 }}>{isLoaded ? '✅' : '📄'}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: isLoaded ? '#1e5c2c' : '#888' }}>
+            {isLoaded ? 'OK' : 'PDF'}
+          </span>
           <div>
             <div style={S.label}>Upload Cart PDF</div>
             <div style={S.desc}>

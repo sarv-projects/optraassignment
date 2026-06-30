@@ -1,12 +1,3 @@
-/**
- * nlpParser.js
- *
- * Parses natural language discount rules via:
- *   1. /api/parse-rule (Groq LLM on Vercel — key stays server-side)
- *   2. Direct Groq call in dev when VITE_GROQ_API_KEY is set
- *   3. Regex fallback when no LLM is available
- */
-
 import {
   callGroqApi,
   DEFAULT_GROQ_MODEL,
@@ -15,8 +6,6 @@ import {
   parseNumber,
   validateRuleFields,
 } from '../../lib/nlpCore.js'
-
-// ── Regex fallback ─────────────────────────────────────────────────
 
 const SCOPE_PATTERNS = [
   { re: /(?:for|on|all)\s+(.+?)\s+brand/i, scope: 'brand', idx: 1 },
@@ -112,8 +101,6 @@ function parseNaturalLanguageRegex(input) {
   }
 }
 
-// ── LLM via API route or direct Groq ───────────────────────────────
-
 async function parseViaApiRoute(input) {
   const response = await fetch('/api/parse-rule', {
     method: 'POST',
@@ -138,9 +125,6 @@ async function parseViaClientGroq(input) {
   return { ...result, source: 'groq' }
 }
 
-/**
- * Main entry — API route → client Groq → regex fallback.
- */
 export async function parseNaturalLanguage(input) {
   const trimmed = input.trim()
   if (!trimmed) {
@@ -150,10 +134,9 @@ export async function parseNaturalLanguage(input) {
   try {
     const apiResult = await parseViaApiRoute(trimmed)
     if (apiResult.ok) return apiResult
-    // 503 = no server key; try client-side Groq in dev
     if (apiResult.status !== 503) return apiResult
   } catch {
-    // API route unavailable (e.g. plain vite dev) — fall through
+    // fall through to client Groq or regex
   }
 
   try {
