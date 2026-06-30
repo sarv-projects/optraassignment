@@ -64,11 +64,8 @@ Override with `GROQ_MODEL` (server) or `VITE_GROQ_MODEL` (client dev).
 | `openai/gpt-oss-20b` | Fast structured parsing (**default**) |
 | `openai/gpt-oss-120b` | Higher quality reasoning |
 | `llama-3.1-8b-instant` | Lightweight / high throughput |
-| `llama-3.3-70b-versatile` | Legacy — **deprecates Aug 16, 2026** on free tier |
 
-Recommended replacements for deprecated models: `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, or `qwen/qwen3.6-27b`.
-
-See [Groq models](https://console.groq.com/docs/models) and [deprecations](https://console.groq.com/docs/deprecations).
+See [Groq models](https://console.groq.com/docs/models).
 
 ## How to use
 
