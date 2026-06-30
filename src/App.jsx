@@ -278,6 +278,7 @@ export default function App() {
         <NaturalLanguageInput
           onRuleAdd={handleNaturalLanguageRule}
           lastAddedRule={lastAddedRule}
+          cartItems={cartItems}
         />
 
         {/* Calculate button */}

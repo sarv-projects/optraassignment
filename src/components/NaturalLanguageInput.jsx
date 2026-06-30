@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { parseNaturalLanguage } from '../engine/nlpParser.js'
+import { ruleMatchesAnyCartItem } from '../../lib/nlpCore.js'
 
 const S = {
   wrap: {
@@ -122,6 +123,16 @@ const S = {
     marginTop: '0.4rem',
     lineHeight: 1.6,
   },
+  warning: {
+    background: '#fff8e0',
+    border: '1px solid #e6c200',
+    borderLeft: '3px solid #c9a000',
+    borderRadius: 4,
+    padding: '0.5rem 0.8rem',
+    marginTop: '0.5rem',
+    fontSize: 12,
+    color: '#5a4a00',
+  },
   error: {
     background: '#fce8e8',
     border: '1px solid #e57373',
@@ -144,7 +155,7 @@ const S = {
   },
 }
 
-export default function NaturalLanguageInput({ onRuleAdd, lastAddedRule }) {
+export default function NaturalLanguageInput({ onRuleAdd, lastAddedRule, cartItems = [] }) {
   const [text, setText] = useState('')
   const [pendingRule, setPendingRule] = useState(null)
   const [parseError, setParseError] = useState('')
@@ -226,6 +237,11 @@ export default function NaturalLanguageInput({ onRuleAdd, lastAddedRule }) {
               </span>
             )}
           </div>
+          {cartItems.length > 0 && pendingRule.scope !== 'cart' && !ruleMatchesAnyCartItem(pendingRule, cartItems) && (
+            <div style={S.warning}>
+              No cart items match &ldquo;{pendingRule.appliesTo}&rdquo;. Check spelling — it must match the brand/platform in your cart exactly.
+            </div>
+          )}
           <div style={S.fieldRow}>
             <span style={S.field}>
               <span style={S.fieldLabel}>Scope</span>
