@@ -4,9 +4,7 @@ FDE Intern assignment — customer-facing cart pricing engine with item-level di
 
 ## Live Demo
 
-> **Deploy to Vercel and paste your URL here before submission.**
-
-`https://your-app.vercel.app`
+https://optraassignment-ggv1fx2jp-sarv-projects-projects.vercel.app/
 
 ## Run locally
 
