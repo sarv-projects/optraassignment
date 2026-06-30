@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import CsvUploader from './components/CsvUploader.jsx'
 import DataTable from './components/DataTable.jsx'
 import ErrorBanner from './components/ErrorBanner.jsx'
@@ -10,7 +10,24 @@ import { processCart } from './engine/discountEngine.js'
 // ── Column definitions ───────────────────────────────────────────
 
 const RULES_COLUMNS = [
-  { key: 'ruleId',    label: 'Rule ID' },
+  {
+    key: 'ruleId',
+    label: 'Rule ID',
+    render: (v, row) => (
+      <span>
+        {v}
+        {row.source === 'nl' && (
+          <span style={{
+            display: 'inline-block', fontSize: 9, fontWeight: 700, marginLeft: 6,
+            padding: '1px 6px', borderRadius: 20, background: '#fff0e0', color: '#FF5800',
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+          }}>
+            NL
+          </span>
+        )}
+      </span>
+    ),
+  },
   { key: 'scope',     label: 'Scope',      render: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
   { key: 'appliesTo', label: 'Applies To' },
   { key: 'type',      label: 'Type',       render: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
@@ -111,6 +128,17 @@ const S = {
     display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '2px 7px',
     borderRadius: 20, marginLeft: 6, verticalAlign: 'middle',
   },
+  successBanner: {
+    background: '#e8f5e9',
+    border: '1px solid #81c784',
+    borderLeft: '3px solid #1e5c2c',
+    borderRadius: 4,
+    padding: '0.6rem 0.9rem',
+    marginBottom: '0.75rem',
+    fontSize: 12,
+    color: '#1e5c2c',
+    fontWeight: 600,
+  },
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -127,8 +155,12 @@ export default function App() {
   const [results, setResults]       = useState(null)
 
   const [additionalRules, setAdditionalRules] = useState([])
+  const [lastAddedRule, setLastAddedRule] = useState(null)
 
-  const allRules = [...rules, ...additionalRules]
+  const allRules = [
+    ...rules.map((r) => ({ ...r, source: 'csv' })),
+    ...additionalRules.map((r) => ({ ...r, source: 'nl' })),
+  ]
 
   // ── Handlers ──
 
@@ -152,19 +184,24 @@ export default function App() {
     setCartItems(items)
     setCartErrors([])
     setCartFileName('cart.pdf')
-    // Auto re-run engine with the new cart and existing rules
-    const res = processCart(items, allRules)
-    setResults(res)
+    setAdditionalRules((extra) => {
+      setRules((csv) => {
+        setResults(processCart(items, [...csv, ...extra]))
+        return csv
+      })
+      return extra
+    })
   }
 
   function handleNaturalLanguageRule(rule) {
-    const updated = [...additionalRules, rule]
-    setAdditionalRules(updated)
-    if (cartItems.length > 0) {
-      setResults(processCart(cartItems, [...rules, ...updated]))
-    } else {
-      setResults(null)
-    }
+    setAdditionalRules((prev) => {
+      const updated = [...prev, rule]
+      if (cartItems.length > 0) {
+        setResults(processCart(cartItems, [...rules, ...updated]))
+      }
+      return updated
+    })
+    setLastAddedRule(rule)
   }
 
   function handleCalculate() {
@@ -197,12 +234,14 @@ export default function App() {
               fileName={rulesFileName}
             />
             <ErrorBanner errors={rulesErrors} />
-            {rules.length > 0 && (
+            {allRules.length > 0 && (
               <div style={{ marginTop: '0.75rem' }}>
                 <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>
-                  {rules.length} rule{rules.length > 1 ? 's' : ''} loaded from CSV
+                  {rules.length} rule{rules.length > 1 ? 's' : ''} from CSV
                   {additionalRules.length > 0 && (
-                    <span> + {additionalRules.length} from natural language</span>
+                    <span style={{ color: '#1e5c2c', fontWeight: 700 }}>
+                      {' '}+ {additionalRules.length} added via natural language (this session)
+                    </span>
                   )}
                 </div>
                 <DataTable columns={RULES_COLUMNS} rows={allRules} />
@@ -236,7 +275,10 @@ export default function App() {
         </div>
 
         {/* Natural Language Input */}
-        <NaturalLanguageInput onRuleAdd={handleNaturalLanguageRule} />
+        <NaturalLanguageInput
+          onRuleAdd={handleNaturalLanguageRule}
+          lastAddedRule={lastAddedRule}
+        />
 
         {/* Calculate button */}
         <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
@@ -258,6 +300,13 @@ export default function App() {
         {results && (
           <div style={S.section}>
             <div style={S.sectionTitle}>Cart Summary</div>
+            {lastAddedRule && (
+              <div style={S.successBanner}>
+                Recalculated with new rule: {lastAddedRule.scope} · {lastAddedRule.appliesTo || 'cart'} ·{' '}
+                {lastAddedRule.type === 'percentage' ? `${lastAddedRule.value}%` : `Rs.${lastAddedRule.value}`}
+                {lastAddedRule.stackable ? ' · stackable' : ''}
+              </div>
+            )}
             <DataTable columns={RESULTS_COLUMNS} rows={results.items} />
 
             {/* Subtotal */}

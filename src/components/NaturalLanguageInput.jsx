@@ -132,9 +132,19 @@ const S = {
     fontSize: 12,
     color: '#5a1010',
   },
+  success: {
+    background: '#e8f5e9',
+    border: '1px solid #81c784',
+    borderLeft: '3px solid #1e5c2c',
+    borderRadius: 4,
+    padding: '0.6rem 0.9rem',
+    marginTop: '0.5rem',
+    fontSize: 12,
+    color: '#1e5c2c',
+  },
 }
 
-export default function NaturalLanguageInput({ onRuleAdd }) {
+export default function NaturalLanguageInput({ onRuleAdd, lastAddedRule }) {
   const [text, setText] = useState('')
   const [pendingRule, setPendingRule] = useState(null)
   const [parseError, setParseError] = useState('')
@@ -196,6 +206,15 @@ export default function NaturalLanguageInput({ onRuleAdd }) {
       </div>
 
       {parseError && <div style={S.error}>{parseError}</div>}
+
+      {lastAddedRule && !pendingRule && (
+        <div style={S.success}>
+          Rule added to this session — <strong>{lastAddedRule.ruleId}</strong> ({lastAddedRule.scope} ·{' '}
+          {lastAddedRule.appliesTo || 'entire cart'} ·{' '}
+          {lastAddedRule.type === 'percentage' ? `${lastAddedRule.value}%` : `Rs.${lastAddedRule.value}`}
+          ). See the rules table above and updated cart summary below.
+        </div>
+      )}
 
       {pendingRule && (
         <div style={S.confirmBox}>
